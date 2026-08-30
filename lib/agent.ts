@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { GoogleGenAI } from '@google/genai';
 import type { BusinessDataSnapshot, ChatMessage } from './types';
 import { formatCurrency } from './data/analytics';
 
@@ -58,32 +58,37 @@ export async function answerQuestion(
     return { answer: buildFallbackAnswer(question, data), usedFallback: true };
   }
 
-  const openai = new OpenAI({
-    apiKey,
-    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-  });
+  const ai = new GoogleGenAI({ apiKey });
   const context = buildContext(data);
 
-  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
-    { role: 'system', content: `Current business data snapshot:\n${context}` },
-    ...history.slice(-6).map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user', content: question },
+  const contents = [
+    ...history.slice(-6).map((m) => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: m.content }],
+    })),
+    { role: 'user', parts: [{ text: question }] },
   ];
 
-  const completion = await openai.chat.completions.create({
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-    messages,
-    temperature: 0.2,
-    max_tokens: 700,
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      contents,
+      config: {
+        systemInstruction: `${SYSTEM_PROMPT}\n\nCurrent business data snapshot:\n${context}`,
+        temperature: 0.2,
+      },
+    });
 
-  const answer = completion.choices[0]?.message?.content?.trim();
-  if (!answer) {
+    const answer = response.text?.trim();
+    if (!answer) {
+      return { answer: buildFallbackAnswer(question, data), usedFallback: true };
+    }
+
+    return { answer, usedFallback: false };
+  } catch (error) {
+    console.error('Gemini API Error:', error);
     return { answer: buildFallbackAnswer(question, data), usedFallback: true };
   }
-
-  return { answer, usedFallback: false };
 }
 
 export async function generateLeadershipUpdate(data: BusinessDataSnapshot): Promise<string> {
