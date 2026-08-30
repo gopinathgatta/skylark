@@ -52,13 +52,16 @@ export async function answerQuestion(
   data: BusinessDataSnapshot,
   history: ChatMessage[] = [],
 ): Promise<{ answer: string; usedFallback: boolean }> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     return { answer: buildFallbackAnswer(question, data), usedFallback: true };
   }
 
-  const openai = new OpenAI({ apiKey });
+  const openai = new OpenAI({
+    apiKey,
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+  });
   const context = buildContext(data);
 
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
@@ -69,7 +72,7 @@ export async function answerQuestion(
   ];
 
   const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
     messages,
     temperature: 0.2,
     max_tokens: 700,
@@ -133,5 +136,5 @@ function buildFallbackAnswer(question: string, data: BusinessDataSnapshot): stri
     return `Financial snapshot: Won deal value ${formatCurrency(s.deals.wonValue)}. Work order contract value ${formatCurrency(s.workOrders.totalContractValue)}, billed ${formatCurrency(s.workOrders.totalBilled)}, receivable ${formatCurrency(s.workOrders.totalReceivable)}. Some amounts may be masked or missing in source data.`;
   }
 
-  return `Business overview: ${s.deals.total} deals (${s.deals.open} open, ${formatCurrency(s.deals.pipelineValue)} pipeline) and ${s.workOrders.total} work orders (${s.workOrders.ongoing} ongoing). Ask about pipeline, sectors, revenue, or work order execution. Set OPENAI_API_KEY for richer conversational answers.`;
+  return `Business overview: ${s.deals.total} deals (${s.deals.open} open, ${formatCurrency(s.deals.pipelineValue)} pipeline) and ${s.workOrders.total} work orders (${s.workOrders.ongoing} ongoing). Ask about pipeline, sectors, revenue, or work order execution. Set GEMINI_API_KEY for richer conversational answers.`;
 }
