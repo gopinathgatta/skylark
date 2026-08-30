@@ -56,9 +56,10 @@ Open http://localhost:3000
 | `MONDAY_API_TOKEN` | Yes | Monday.com personal API token |
 | `MONDAY_DEALS_BOARD_ID` | Yes | Deals board ID |
 | `MONDAY_WORK_ORDERS_BOARD_ID` | Yes | Work Orders board ID |
-| `OPENAI_API_KEY` | Recommended | Enables conversational AI answers |
+| `GEMINI_API_KEY` | Recommended | Enables conversational AI answers via Google Gemini 2.5 Flash |
+| `OPENAI_API_KEY` | Optional | Alternative OpenAI API key |
 
-Without `OPENAI_API_KEY`, the agent uses rule-based fallback answers (still reads live Monday data).
+Without `GEMINI_API_KEY` or `OPENAI_API_KEY`, the agent uses rule-based fallback answers (still reads live Monday data).
 
 ## Deploy (Vercel)
 
